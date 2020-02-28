@@ -3,11 +3,11 @@
 import sys
 
 # Hardcode variables for branch table
-LDI = 0b10000010
-PRN = 0b01000111
-HLT = 0b00000001
-MUL = 0b10100010
-CMP = 0b10100111
+# LDI = 0b10000010
+# PRN = 0b01000111
+# HLT = 0b00000001
+# MUL = 0b10100010
+# CMP = 0b10100111
 
 # R7 Stack Pointer
 SP = 7
@@ -59,9 +59,22 @@ class CPU:
             self.pc += 3
 
         def JMP(operand_a, operand_b):
-            # go to theaddress stored in the given register .Set the PC to the address stored in the given register.
+            # go to the address stored in the given register .Set to address stored in the given register.
             self.pc = self.reg[operand_a]
 
+        def JEQ(operand_a, operand_b):
+                # If equal flag is set (true), jump to the address stored in the
+            if self.fl == 0b00000001:
+                JMP(operand_a, operand_b)
+            else:
+                self.pc += 2
+
+        def JNE(operand_a, operand_b):
+            # If E flag is clear (false, 0), jump to the address stored in
+            if self.fl != 0b00000001:
+                JMP(operand_a, operand_b)
+            else:
+                self.pc += 2
         self.op_codes = {
             0b10000010: LDI,
             0b01000111: PRN,
@@ -70,6 +83,8 @@ class CPU:
             0b01010000: CALL,
             0b10100111: CMP,
             0b01010100: JMP,
+            0b01010101: JEQ,
+            0b01010110: JNE,
         }
 
     def load(self):
