@@ -54,10 +54,6 @@ class CPU:
             self.alu('MUL', operand_a, operand_b)
             self.pc += 3
 
-        def CMP(operand_a, operand_b):
-            self.alu('CMP', operand_a, operand_b)
-            self.pc += 3
-
         def JMP(operand_a, operand_b):
             # go to the address stored in the given register .Set to address stored in the given register.
             self.pc = self.reg[operand_a]
@@ -75,6 +71,10 @@ class CPU:
                 JMP(operand_a, operand_b)
             else:
                 self.pc += 2
+
+        def CMP(operand_a, operand_b):
+            self.alu('CMP', operand_a, operand_b)
+            self.pc += 3
         self.op_codes = {
             0b10000010: LDI,
             0b01000111: PRN,
@@ -121,17 +121,16 @@ class CPU:
         # elif op == "SUB": etc
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
-        elif op == "CMP":  # Flags
-            FL = self.fl
-            if self.reg[reg_a] == self.reg[reg_b]:
-                 # Set to 1 if regA is less than regB, zero otherwise.
-                FL = 0b00000001
+        elif op == 'CMP':
             if self.reg[reg_a] < self.reg[reg_b]:
-               # Set to 1 if regA is greater than regB, zero otherwise
-                FL = 0b00000100
-            if self.reg[reg_a] > self.reg[reg_b]:
-                  # Set to 1 if registerA is equal to registerB, zero otherwise
-                FL = 0b00000010
+                # Set to 1 if A is less than B else 0
+                self.fl = 0b00000100
+            elif self.reg[reg_a] > self.reg[reg_b]:
+                # Set to 1 if A is greater than B else 0
+                self.fl = 0b00000010
+            elif self.reg[reg_a] == self.reg[reg_b]:
+                # Set to 1 if A is equal to B else 0
+                self.fl = 0b00000001
         else:
             raise Exception("Unsupported ALU operation")
 
