@@ -7,6 +7,8 @@ LDI = 0b10000010
 PRN = 0b01000111
 HLT = 0b00000001
 MUL = 0b10100010
+CMP = 0b10100111
+
 # R7 Stack Pointer
 SP = 7
 
@@ -22,11 +24,14 @@ class CPU:
         # Internal Registers
         self.pc = 0  # counter
         self.ir = "00000000"
-        # instruction set
+        self.fl = 0b00000000  # Holds current flag status
+        self.running = True
+
         self.instruction = {}
         self.instruction[LDI] = self.handle_LDI
         self.instruction[PRN] = self.handle_PRN
         self.instruction[MUL] = self.handle_MUL
+        self.instruction[CMP] = self.handle_CMP
 
     def ram_read(self, address):
         return self.ram[address]
@@ -34,12 +39,16 @@ class CPU:
     def ram_write(self, address, value):
         self.ram[address] = value
 
-    def load(self, program):
+    def load(self):
         """Load a program into memory."""
+        if len(sys.argv) != 2:
+            print('Usage: file.py <filename>', file=sys.stderr)
+            sys.exit(1)
+
         try:
             address = 0
 
-            with open(program) as f:
+            with open(sys.argv[1]) as f:
                 for line in f:
                     comment_split = line.split('#')
                     num = comment_split[0].strip()
@@ -60,6 +69,17 @@ class CPU:
         # elif op == "SUB": etc
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "CMP":  # Flags
+            FL = self.fl
+            if self.reg[reg_a] == self.reg[reg_b]:
+                 # Set to 1 if regA is less than regB, zero otherwise.
+                FL = 0b00000001
+            if self.reg[reg_a] < self.reg[reg_b]:
+               # Set to 1 if regA is greater than regB, zero otherwise
+                FL = 0b00000100
+            if self.reg[reg_a] > self.reg[reg_b]:
+                  # Set to 1 if regA is equal to registerB, zero otherwise
+                FL = 0b00000010
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -93,6 +113,10 @@ class CPU:
 
     def handle_MUL(self, operand_a, operand_b):
         self.alu("MUL", operand_a, operand_b)
+        self.pc += 3
+
+    def handle_CMP(operand_a, operand_b):
+        self.alu('CMP', operand_a, operand_b)
         self.pc += 3
 
     def run(self):
