@@ -23,21 +23,48 @@ class CPU:
         self.reg = [0] * 8
         # Internal Registers
         self.pc = 0  # counter
-        self.ir = "00000000"
+        self.sp = 7
         self.fl = 0b00000000  # Holds current flag status
         self.running = True
 
-        self.instruction = {}
-        self.instruction[LDI] = self.handle_LDI
-        self.instruction[PRN] = self.handle_PRN
-        self.instruction[MUL] = self.handle_MUL
-        self.instruction[CMP] = self.handle_CMP
+        def LDI(operand_a, operand_b):
+            # Insert a decimal integer into a register
+            self.reg[operand_a] = operand_b
+            self.pc += 3
 
-    def ram_read(self, address):
-        return self.ram[address]
+        def PRN(operand_a, operand_b):
+            # Print to the console the decimal integer value that is
+            # stored in the given register.
+            print(self.reg[operand_a])
+            self.pc += 2
 
-    def ram_write(self, address, value):
-        self.ram[address] = value
+        def HLT(operand_a, operand_b):
+            # Halt the CPU (and exit the emulator)
+            self.running = False
+
+        def CALL(operand_a, operand_b):
+            # Push return address onto the stack
+            return_address = self.pc + 2
+            self.reg[self.sp] -= 1
+            self.ram[self.reg[self.sp]] = return_address
+            # Set PC to the value in the register
+            self.pc = self.reg[operand_a]
+
+        def MUL(operand_a, operand_b):
+            self.alu('MUL', operand_a, operand_b)
+            self.pc += 3
+
+        def CMP(operand_a, operand_b):
+            self.alu('CMP', operand_a, operand_b)
+            self.pc += 3
+        self.op_codes = {
+            0b10000010: LDI,
+            0b01000111: PRN,
+            0b00000001: HLT,
+            0b10100010: MUL,
+            0b01010000: CALL,
+            0b10100111: CMP,
+        }
 
     def load(self):
         """Load a program into memory."""
@@ -47,19 +74,23 @@ class CPU:
 
         try:
             address = 0
-
             with open(sys.argv[1]) as f:
                 for line in f:
+                    # Ignore comments
                     comment_split = line.split('#')
                     num = comment_split[0].strip()
-                    if num == "":
+
+                    if num == '':
+                        # Ignore blank lines
                         continue
+
                     value = int(num, 2)
-                    self.ram_write(address, value)
+                    self.ram[address] = value
                     address += 1
 
         except FileNotFoundError:
-            print(f"{sys.arg[0]}: {sys.arg[1]} not found")
+            print(f'{sys.argv[0]}: {sys.argv[1]} not found.')
+            sys.exit(2)
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -78,7 +109,7 @@ class CPU:
                # Set to 1 if regA is greater than regB, zero otherwise
                 FL = 0b00000100
             if self.reg[reg_a] > self.reg[reg_b]:
-                  # Set to 1 if regA is equal to registerB, zero otherwise
+                  # Set to 1 if registerA is equal to registerB, zero otherwise
                 FL = 0b00000010
         else:
             raise Exception("Unsupported ALU operation")
@@ -103,40 +134,25 @@ class CPU:
 
         print()
 
-    def handle_LDI(self, operand_a, operand_b):
-        self.reg[operand_a] = operand_b
-        self.pc += 3
+    def ram_read(self, address):
+        return self.ram[address]
 
-    def handle_PRN(self, operand_a, operand_b):
-        print(f"Print to Console - {self.reg[operand_a]}")
-        self.pc += 2
-
-    def handle_MUL(self, operand_a, operand_b):
-        self.alu("MUL", operand_a, operand_b)
-        self.pc += 3
-
-    def handle_CMP(operand_a, operand_b):
-        self.alu('CMP', operand_a, operand_b)
-        self.pc += 3
+    def ram_write(self, address, value):
+        self.ram[address] = value
 
     def run(self):
         """Run the CPU."""
 
-        running = True  # REPL  execution
+        while self.running:
+            # Instruction Register (IR)
+            IR = self.ram_read(self.pc)
+            operand_a = self.ram_read(self.pc + 1)
+            operand_b = self.ram_read(self.pc + 2)
+            # Find opcode name of IR
+            opcode = self.op_codes[IR]
 
-        self.reg[SP] = 0xF4
-        while running:
-            # Start the CPU store instructions in IR
-            self.ir = self.ram_read(self.pc)
-            operand_a = self.ram_read(self.pc+1)
-            operand_b = self.ram_read(self.pc+2)
-
-            if self.ir == HLT:
-                running = False
-                break
-            # excecute instructions
-            try:
-                self.instruction[self.ir](operand_a, operand_b)
-            except:
-                print(f"Error: Unknown Command {self.ir}")
+            if opcode:
+                opcode(operand_a, operand_b)
+            else:
+                print(f'Error: Unknown command: {IR}')
                 sys.exit(1)
